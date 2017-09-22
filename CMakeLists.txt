@@ -85,6 +85,7 @@ IF(NOT OpenCV_DIR)
             -DWITH_JASPER:BOOL=OFF
             -DWITH_TIFF:BOOL=OFF
             -DWITH_IPP:BOOL=OFF
+            -DWITH_CUDA:BOOL=OFF
             -DBUILD_opencv_apps:BOOL=OFF
             -DBUILD_opencv_calib3d:BOOL=ON
             -DBUILD_opencv_flann:BOOL=ON
@@ -130,7 +131,7 @@ IF(NOT OpenCV_DIR)
         MESSAGE(STATUS "Using homebrew opencv3")
         set(OpenCV_DIR "/usr/local/opt/opencv3/share/OpenCV")
     ELSE()
-        set(OpenCV_DIR “/usr/local/share/OpenCV”)
+        set(OpenCV_DIR "usr/local/share/OpenCV")
     ENDIF()#Windows or Darwin
 ENDIF(NOT OpenCV_DIR)
 LIST(APPEND CMAKE_MODULE_PATH ${OpenCV_DIR})
