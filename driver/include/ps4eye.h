@@ -37,17 +37,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <vector>
-#include <string>
-#include <sstream>
-#include <iostream>
+
 // define shared_ptr in std
-
-//#define DEBUG
-
-#define ISO_PACKET_SIZE 49152
-
-#define ISO_PACKETS_PER_TRANSFER 8
-
 
 #if (defined( _MSC_VER ) && ( _MSC_VER >= 1600 )) || (__cplusplus >= 201103L)
 #include <memory>
@@ -63,7 +54,8 @@ namespace std {
 }
 #endif
 
-#include "libusb.h"
+#include <Windows.h>
+#include <winusb.h>
 
 #ifndef __STDC_CONSTANT_MACROS
 #  define __STDC_CONSTANT_MACROS
@@ -71,11 +63,19 @@ namespace std {
 
 #include <stdint.h>
 
-#if defined(DEBUG)
-#define debug(x...) fprintf(stdout,x)
-#else
-#define debug(x)
-#endif
+#define debug printf
+
+// {E91E9755-C986-40C3-887E-CE38C491425E}
+DEFINE_GUID(GUID_DEVINTERFACE_PS4EYE,
+	0xe91e9755, 0xc986, 0x40c3, 0x88, 0x7e, 0xce, 0x38, 0xc4, 0x91, 0x42, 0x5e);
+
+// {3B45E7A8-1210-42D3-8354-13C12112B3B5}
+DEFINE_GUID(GUID_DEVINTERFACE_USBBOOT,
+	0x3b45e7a8, 0x1210, 0x42d3, 0x83, 0x54, 0x13, 0xc1, 0x21, 0x12, 0xb3, 0xb5);
+
+// {88BAE032-5A81-49F0-BC3D-A4FF138216D6}
+DEFINE_GUID(GUID_DEVCLASS_USBDEVICE,
+	0x88bae032, 0x5a81, 0x49f0, 0xbc, 0x3d, 0xa4, 0xff, 0x13, 0x82, 0x16, 0xd6);
 
 typedef struct eyeframe
 {
@@ -90,7 +90,6 @@ typedef struct eyeframe
 
 namespace ps4eye {
 
-
     class PS4EYECam
     {
     public:
@@ -99,13 +98,12 @@ namespace ps4eye {
         static const uint16_t VENDOR_ID;
         static const uint16_t PRODUCT_ID;
         std::string  firmware_path;
-        bool firmwareisloaded;
         int rightflag;
        
 
 
 
-        PS4EYECam(libusb_device *device, bool firmware_check);
+        PS4EYECam(HANDLE device, bool firmware_check);
         ~PS4EYECam();
 
 
@@ -116,18 +114,9 @@ namespace ps4eye {
         void stop();
         void shutdown();
 
-
-        //dump functions from lsusb.c
-        void dump_endpoint_comp(const struct libusb_ss_endpoint_companion_descriptor *ep_comp);
-        void dump_endpoint(const struct libusb_endpoint_descriptor *endpoint);
-        void dump_altsetting(const struct libusb_interface_descriptor *interface);
-        void dump_interface(const struct libusb_interface *interface);
-        void dump_config(struct libusb_config_descriptor *config);
-        void dump_device();
-
         //
         static const std::vector<PS4EYERef>& getDevices( bool forceRefresh = false );
-        static bool updateDevices();
+        bool updateDevices();
         void firmware_upload();
 
         bool isStreaming() const { return is_streaming; }
@@ -163,7 +152,6 @@ namespace ps4eye {
         int uvc_set_white_balance_temperature(uint16_t temperature);
         int uvc_get_gain(uint16_t* gain, uint8_t req_code);
         int uvc_set_gain(uint16_t gain);
-		int uvc_set_ae_mode(uint8_t mode);
         int uvc_get_power_line_frequency(uint8_t* power_line_frequency, uint8_t req_code);
         int uvc_set_power_line_frequency(uint8_t power_line_frequency);
 
@@ -191,6 +179,7 @@ namespace ps4eye {
         unsigned int control_wLength;
 
         //firmware flag default false
+        bool firmwareisloaded;
         uint32_t frame_width;
         uint32_t frame_height;
         uint32_t frame_stride;
@@ -205,7 +194,6 @@ namespace ps4eye {
 
 
         PS4EYECam(const PS4EYECam&);
-        void operator=(const PS4EYECam&);
 
 
         void release();
@@ -221,10 +209,11 @@ namespace ps4eye {
 
 
         //usb stuff
-        libusb_device *device_;
-        libusb_device_handle *handle_;
+        HANDLE device_;
+        WINUSB_INTERFACE_HANDLE handle_;
+        WINUSB_INTERFACE_HANDLE base_handle_;
 
-        struct libusb_transfer * control_transfer;
+        OVERLAPPED control_transfer;
 
         uint8_t * control_transfer_buffer;
 
@@ -241,12 +230,11 @@ namespace ps4eye {
         uint8_t register_read(uint16_t reg,uint8_t subaddr);
 
 
-        void submitAndWait_controlTransfer(uint8_t bmRequestType, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint16_t wLength, uint8_t *buffer);
+        int submitAndWait_controlTransfer(uint8_t bmRequestType, uint8_t bRequest, uint16_t wValue, uint16_t wIndex, uint16_t wLength, uint8_t *buffer);
 
         void submit_controlTransfer(uint8_t bmRequestType, uint8_t bRequest, uint16_t wValue,uint16_t wIndex, uint16_t wLength, uint8_t*buffer);
 
-        static uint8_t * controlTransferStatus(libusb_transfer_status x);
-        void static LIBUSB_CALL ct_done(struct libusb_transfer * transfer);
+        static uint8_t * controlTransferStatus(DWORD x);
         
         bool open_usb();
         void close_usb();

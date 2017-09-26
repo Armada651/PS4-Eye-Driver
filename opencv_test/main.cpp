@@ -77,9 +77,9 @@ void yuyvToRgb(uint8_t *in, uint8_t *out, int size_x, int size_y) {
 	}
 }
 
-void update() {
+void update(ps4eye::PS4EYECam::PS4EYERef eye) {
 	while (isRunning) {
-		if (!ps4eye::PS4EYECam::updateDevices())
+		if (!eye->updateDevices())
 			break;
 	}
 }
@@ -156,7 +156,7 @@ int main() {
 
 	cv::namedWindow("right");
 
-	std::thread updateThread(update);
+	std::thread updateThread(update, eye);
 
 
 //	eye->start_sensors_streaming();
