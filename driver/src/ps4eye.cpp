@@ -345,15 +345,16 @@ namespace ps4eye {
                     frame_size=5571968;
                     break;
             }
-            const size_t bytes = frame_size * 16 + 49152 * 8 * 15;
-            frame_buffer = (uint8_t*)malloc(bytes);
+            frame_buffer = (uint8_t*)malloc(frame_size * 16);
             if(!frame_buffer)
             {
                 debug("error reservando\n");
             }
-            memset(frame_buffer, 0, bytes);
+            memset(frame_buffer, 0, frame_size * 16);
 
-            frame_buffer_end = frame_buffer + frame_size * 16;
+			size_t transfer_size = 49152 * 8 * 15;
+            transfer_buffer = (uint8_t*)malloc(transfer_size);
+			memset(transfer_buffer, 0, transfer_size);
 
             frame_data_start = frame_buffer;
             frame_data_len = 0;
@@ -362,7 +363,10 @@ namespace ps4eye {
             ff71status = -2;
             frame_counter=0;
 
-			BOOL res = WinUsb_RegisterIsochBuffer(handle, 0, frame_buffer, bytes, &frame_buffer_handle);
+			WINUSB_PIPE_INFORMATION_EX info = {};
+			BOOL res = WinUsb_QueryPipeEx(handle, 1, 0, &info);
+
+			res = WinUsb_RegisterIsochBuffer(handle, 0, transfer_buffer, transfer_size, &transfer_buffer_handle);
 			if (!res)
 				debug("Failed to register IsochBuffer, error: %d\n", GetLastError());
         }
@@ -378,15 +382,16 @@ namespace ps4eye {
             const size_t fsz = 5571968; //hardcoded interface dwMaxVideoFrameBufferSize 5571968
 
             //frame_buffer = (uint8_t*)malloc(fsz * 16 + 16384*2);
-            const size_t bytes = fsz * 16 + 49152 * 8 * 15;
-            frame_buffer = (uint8_t*)malloc(bytes);
+            frame_buffer = (uint8_t*)malloc(fsz * 16);
             if(!frame_buffer)
             {
                 debug("error reservando\n");
             }
-            memset(frame_buffer, 0, bytes);
+            memset(frame_buffer, 0, fsz * 16);
 
-            frame_buffer_end = frame_buffer + fsz * 16;
+			size_t transfer_size = 49152 * 8 * 15;
+			transfer_buffer = (uint8_t*)malloc(transfer_size);
+			memset(transfer_buffer, 0, transfer_size);
 
             frame_data_start = frame_buffer;
             frame_data_len = 0;
@@ -396,14 +401,14 @@ namespace ps4eye {
             ff71status = -2;
             frame_counter=0;
 
-            BOOL res = WinUsb_RegisterIsochBuffer(handle, 0, frame_buffer, bytes, &frame_buffer_handle);
+            BOOL res = WinUsb_RegisterIsochBuffer(handle, 0, transfer_buffer, transfer_size, &transfer_buffer_handle);
 			if (!res)
 				debug("Failed to register IsochBuffer, error: %d\n", GetLastError());
         }
         ~URBDesc()
         {
             debug("URBDesc destructor\n");
-            WinUsb_UnregisterIsochBuffer(frame_buffer_handle);
+            WinUsb_UnregisterIsochBuffer(transfer_buffer_handle);
             if(num_transfers)
             {
                 close_transfers();
@@ -411,6 +416,9 @@ namespace ps4eye {
             if(frame_buffer != NULL)
                 free(frame_buffer);
             frame_buffer = NULL;
+			if (transfer_buffer != NULL)
+				free(transfer_buffer);
+			transfer_buffer = NULL;
         }
 
         bool start_transfers(uint32_t curr_frame_size)
@@ -446,13 +454,12 @@ namespace ps4eye {
             BOOL res = FALSE;
             for(i=0;i<ISOCH_TRANSFER_COUNT;i++)
             {
-                //res|=libusb_submit_transfer(xfr[i]);
                 res |= WinUsb_ReadIsochPipeAsap(
-                    frame_buffer_handle,
-                    frame_size * 16 + 49152 * 8 * i,
+					transfer_buffer_handle,
+                    (49152 * 8) * i,
                     49152 * 8,
 					(i == 0) ? FALSE : TRUE,
-					ISOCH_TRANSFER_COUNT,
+					ISOCH_TRANSFER_COUNT * 8,
                     &xfr[i * ISOCH_TRANSFER_COUNT],
                     &xfr_handle[i]);
 
@@ -627,7 +634,7 @@ namespace ps4eye {
 
                     if (actual_length>0)
                     {
-                        pkt_scan(frame_buffer_end + 49152 * i, actual_length);
+                        pkt_scan(transfer_buffer + 49152 * i, actual_length);
                     }
                 }
             }
@@ -642,9 +649,10 @@ namespace ps4eye {
         USBD_ISO_PACKET_DESCRIPTOR xfr[15 * ISOCH_TRANSFER_COUNT];
         OVERLAPPED xfr_handle[ISOCH_TRANSFER_COUNT];
 
-        WINUSB_ISOCH_BUFFER_HANDLE frame_buffer_handle;
+        WINUSB_ISOCH_BUFFER_HANDLE transfer_buffer_handle;
+		uint8_t *transfer_buffer;
+
         uint8_t *frame_buffer;
-        uint8_t *frame_buffer_end;
         uint8_t *frame_data_start;
         uint32_t frame_data_len;
         uint32_t frame_size;
@@ -2485,12 +2493,12 @@ namespace ps4eye {
       
 
         //set alt setting 1 to interface 1
-        /*res=WinUsb_SetCurrentAlternateSetting(handle_, 1);
+        res = WinUsb_SetCurrentAlternateSetting(handle_, 1);
         if(!res) {
             debug("set alt setting to interface error: %d\n", GetLastError());
             return false;
         }
-        debug("set alt to 1 in interface 1\n");*/
+        debug("set alt to 1 in interface 1\n");
         uvc_show_video_mode();
         uvc_set_video_mode(mode,frame_rate);
         uvc_show_video_mode();
