@@ -30,3 +30,6 @@
 # Tmp files
 *~
 
+# Build and deps directories
+build
+deps

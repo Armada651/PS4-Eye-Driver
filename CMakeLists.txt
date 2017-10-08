@@ -65,9 +65,9 @@ IF(NOT OpenCV_DIR)
     IF(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
         ExternalProject_Add(opencv
           PREFIX ${ROOT_DIR}/deps/opencv
-          GIT_REPOSITORY https://github.com/opencv/opencv.git
+          GIT_REPOSITORY https://github.com/Armada651/opencv.git
           GIT_SHALLOW 1
-          GIT_TAG 3.1.0
+          GIT_TAG msmf-media-types
           CMAKE_GENERATOR ${gen}
           CMAKE_ARGS
             -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
@@ -86,6 +86,7 @@ IF(NOT OpenCV_DIR)
             -DWITH_TIFF:BOOL=OFF
             -DWITH_IPP:BOOL=OFF
             -DWITH_CUDA:BOOL=OFF
+            -DWITH_MSMF:BOOL=ON
             -DBUILD_opencv_apps:BOOL=OFF
             -DBUILD_opencv_calib3d:BOOL=ON
             -DBUILD_opencv_flann:BOOL=ON
@@ -114,11 +115,11 @@ IF(NOT OpenCV_DIR)
         endif()
 
         foreach(__CVLIB core calib3d features2d flann imgproc imgcodecs ml highgui objdetect video videoio)
-            set(OpenCV_${__CVLIB}_LIBRARY debug ${OPENCV_LIBS_DIR}/opencv_${__CVLIB}310d.lib optimized ${OPENCV_LIBS_DIR}/opencv_${__CVLIB}310.lib CACHE STRING "" FORCE)
+            set(OpenCV_${__CVLIB}_LIBRARY debug ${OPENCV_LIBS_DIR}/opencv_${__CVLIB}330d.lib optimized ${OPENCV_LIBS_DIR}/opencv_${__CVLIB}330.lib CACHE STRING "" FORCE)
             set(OpenCV_LIBS ${OpenCV_LIBS} ${OpenCV_${__CVLIB}_LIBRARY})
         endforeach(__CVLIB)    
 
-        foreach(__CVLIB libjpeg libpng libwebp zlib)
+        foreach(__CVLIB libjpeg libpng libwebp zlib ittnotify)
             set(OpenCV_${__CVLIB}_LIBRARY debug ${OPENCV_LIBS_DIR}/${__CVLIB}d.lib optimized ${OPENCV_LIBS_DIR}/${__CVLIB}.lib CACHE STRING "" FORCE)
             set(OpenCV_LIBS ${OpenCV_LIBS} ${OpenCV_${__CVLIB}_LIBRARY})
         endforeach(__CVLIB)     
