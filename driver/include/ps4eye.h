@@ -128,7 +128,7 @@ namespace ps4eye {
         //
         static const std::vector<PS4EYERef>& getDevices( bool forceRefresh = false );
         static bool updateDevices();
-        void firmware_upload();
+        bool firmware_upload();
 
         bool isStreaming() const { return is_streaming; }
         bool isNewFrame() const;

@@ -2598,13 +2598,13 @@ void PS4EYECam::submit_controlTransfer(uint8_t bmRequestType, uint8_t bRequest,
 	libusb_submit_transfer(control_transfer);
 }
 
-void PS4EYECam::firmware_upload() {
+bool PS4EYECam::firmware_upload() {
 	if (!firmwareisloaded) {
 		handle_ = libusb_open_device_with_vid_pid(
 				USBMgr::instance()->usbContext(), 0x05a9, 0x0580);
 		if (handle_ == NULL) {
 			cout << "ov580 Camera boot mode not found..." << endl;
-			exit(0);
+            return false;
 		}
 //cout <<"ov580 Camera boot mode found..." << endl;
 
@@ -2645,16 +2645,18 @@ void PS4EYECam::firmware_upload() {
 			submit_controlTransfer(0x40, 0x0, 0x2200, 0x8018, 1, chunk);
 			Sleep(1000);
 			libusb_cancel_transfer(control_transfer);
+            libusb_close(handle_);
 
 			cout << "Firmware uploaded..." << endl;
 		} else {
 			cout << "Unable to open firmware.bin!" << endl;
+            return false;
 		}
-		exit(0);
 	} else {
 		cout << "Firmware already loaded..." << endl;
 	}
-
+    firmwareisloaded = true;
+    return true;
 }
 
 }
